@@ -1,2 +1,7 @@
 
 *.uzn
+# exclude everything
+public/uploads/*
+
+# exception to the rule
+!public/uploads/blu
