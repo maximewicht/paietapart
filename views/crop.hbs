@@ -1,0 +1,48 @@
+<form action="/crop/okay" method="post">
+	<span style="font-size:5em; margin-left:100px; margin-right:50px">
+		<input type="checkbox" name="pricetop" value="true" style="transform: scale(3.0);"/>Prices top<br>
+	</span>
+	<input type="hidden" id="x" name="x" />
+	<input type="hidden" id="y" name="y" />
+	<input type="hidden" id="w" name="w" />
+	<input type="hidden" id="h" name="h" />
+	<input type="submit" value="Validate" class="btn btn-primary" style="font-size:4em; width:100%"  />
+	<div>
+		<img id="target" src="{{filepath}}" alt="bill" style="max-width:100%" />
+	</div>
+</form>
+
+<link rel="stylesheet" href="css/cropper.css" />
+<style type="text/css">
+	.cropper-point {
+		width:40px;
+		height:40px;
+	}
+	.cropper-line {
+		width:40px;
+	}
+</style>
+<script src="scripts/cropper.js"></script>
+<script> 
+	window.addEventListener('DOMContentLoaded', function () {
+		var image = document.querySelector('#target');
+		var width = image.clientWidth;
+		var height = image.clientHeight;
+		var cropper = new Cropper(image, {
+			dragMode: 'move',
+			zoomable:true,
+			cropBoxResizable:true,
+			movable:true,
+			viewMode:1,
+			autoCropArea:0.3,
+			crop: function(e) {
+				var data = e.detail;
+				$('#x').val(data.x);
+				$('#y').val(data.y);
+				$('#w').val(data.width);
+				$('#h').val(data.height);
+			}
+		});
+		
+	});
+</script>

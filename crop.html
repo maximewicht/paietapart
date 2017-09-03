@@ -1,0 +1,156 @@
+<!doctype html>
+<html>
+<head>
+  <!-- Latest compiled and minified CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <title>Paie ta part</title>
+</head>
+<link rel="stylesheet" href="jquery.Jcrop.css" type="text/css" />
+<style>
+  .iteminfo {
+    display: inline-block;
+    width:20%;
+    vertical-align: bottom;
+    font-size: 4em;
+  }
+
+  .item-selected,.item-notselected  {
+    display: inline-block;
+    width:80%;
+  }
+
+  .item-selected img {
+    opacity: 1;
+    width:100%;
+  }
+
+  .item-notselected img {
+    opacity: .5;
+    width:100%;
+  }
+
+  .line {
+  }
+</style>
+<body>
+  <form id="uploadForm" enctype="multipart/form-data" action="/upload" method="post">
+    <input type="file" name="uploadedBill" />
+    <input type="submit" value="Upload Image" name="submit" class="btn btn-primary">
+    <input type='text' id='random' name='random'><br>
+    <span id = "status"></span>
+  </form>
+  <form action="/crop" method="post">
+    <input type="hidden" id="x" name="x" />
+    <input type="hidden" id="y" name="y" />
+    <input type="hidden" id="w" name="w" />
+    <input type="hidden" id="h" name="h" />
+    <input type="submit" value="Validate" class="btn btn-large btn-inverse" />
+  </form>
+  <form>
+    <div class="jumbotron text-center">
+      <h1>Paie ta part</h1>
+      <h1 id='myprice'></h1>
+      <p>avec cet ubba site c'est facile</p> 
+      <button type="button" class="btn btn-primary">Sélectionner les chiffres</button>
+      <button type="button" class="btn btn-primary">Démarrer</button>
+    </div>
+  </form>
+  <div id='billContainer' style="width:100%">
+<!--     <img id="target" src="example1-400x333x110x262.jpg" alt="bill" style="width:100%"/>
+ -->  </div>
+</body>
+<script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+<script src="jquery.Jcrop.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  var socket = io();
+  $(document).ready(function() {
+
+    $(function(){
+      $('#target').Jcrop({
+        onSelect: updateCoords,
+        trueSize:[580,1024],
+      }, function() {
+        jcrop_api = this;
+      });
+
+    });
+
+    function updateCoords(c)
+    {
+      $('#x').val(c.x);
+      $('#y').val(c.y);
+      $('#w').val(c.w);
+      $('#h').val(c.h);
+    };
+
+    $('#uploadForm').submit(function() {
+      $("#status").empty().text("File is uploading...");
+      $(this).ajaxSubmit({
+        error: function(xhr) {
+          status('Error: ' + xhr.status);
+        },
+        success: function(response) {
+          console.log(response)
+          $("#status").empty().text(response);
+        }
+      });
+      return false;
+    });    
+
+    $('#billContainer').on('click', '.item-notselected' , function() {
+      $( this ).removeClass('item-notselected');
+      $( this ).addClass('item-selected');
+      socket.emit('toggle', $( this ).parent().attr('id'));
+    });
+
+    $('#billContainer').on('click', '.item-selected' , function() {
+      $( this ).removeClass('item-selected');
+      $( this ).addClass('item-notselected');
+      socket.emit('toggle', $( this ).parent().attr('id'));
+    });
+
+
+    var pseudo = prompt('Quel est votre pseudo ?');
+    socket.emit('newuser', pseudo);
+
+    socket.on('bill', function(bill){
+      bill.forEach(function(item) {
+        var img = '<img src=\"'+ item.src + '\" style=\"width:100%\"/>';
+        var info = '<div id=\"'+item.id+'_iteminfo\" class=\"iteminfo\"></div>';
+        var line = '<div class=\"line\" id=\"'+item.id+'\"><div id=\"'+item.id+'_item\" class=\"item-notselected\">'+ img +'</div>'+ info +'</div>';
+        $('#billContainer').append(line);
+      });
+      socket.emit('ready');
+    });
+
+    socket.on('update', function(state) {
+      var i = 0;
+      var myprice = 0.0;  
+      state.forEach(function(item) {
+        if (item.users.indexOf(pseudo) > -1) {
+          setSelected(item.id);
+          $('#' + item.id + '_iteminfo').text(item.userprice);
+          myprice += item.userprice; 
+        }
+        else {
+          $('#' + item.id + '_iteminfo').text('0.0');
+          setNotSelected(item.id);
+        }
+        i++;
+      });
+      $('#myprice').text(myprice);
+    });
+
+    function setSelected(idx) {
+      $('#' + idx + '_item').removeClass('item-notselected');
+      $('#' + idx + '_item').addClass('item-selected');
+    }
+
+    function setNotSelected(idx) {
+      $('#' + idx + '_item').removeClass('item-selected');
+      $('#' + idx + '_item').addClass('item-notselected');
+    }
+  });
+</script>
+</html>

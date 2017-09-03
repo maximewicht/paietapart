@@ -1,0 +1,23 @@
+<form action="/newsession" method="post">
+	<input type="submit" value="Validate" class="btn btn-primary" style="font-size:4em; width:100%"/>
+	{{#each items}}
+	<div style="display:flex">
+		<div id="{{this.id}}_item" style="width:100%;position:relative;">
+			{{#unless this.topbottom}}
+				<input class="price" name="item-{{this.id}}" value="{{this.price}}"/>
+			{{/unless}}
+			<img src="{{this.src}}" alt="Recognized price: {{this.price}}" style="width:90%" />
+		</div>
+	</div>
+	{{/each}}
+</form>
+
+<style type="text/css">
+	.price {
+		position:absolute;
+		top:50%;
+		right:0;
+		width:10%;
+		font-size:23px;
+	}
+</style>

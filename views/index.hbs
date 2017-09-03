@@ -1,0 +1,48 @@
+<h2 style="font-size:5em">Sessions en cours</h2>
+<div>
+	<ol>
+		{{#each sessions}}
+		<li style="font-size:3em">
+			<a href="/join/{{this.sessionId}}">{{this.timestamp}}</a>
+		</li>
+		{{/each}}
+	</ol>
+</div>
+<h2 style="font-size:5em; margin-top:50px">Démarrer une nouvelle session</h2>
+<form id="uploadForm" enctype="multipart/form-data" action="/upload" method="post">
+	<span class="btn btn-default btn-file btn-primary" style="width:100%; font-size:5em" >
+		Charger un fichier
+		<input id="btnload" type="file" name="bill" accept="image/*" class="btn btn-primary" style="width:100%; font-size:5em" />
+	</span>
+	<span id="status"></span>
+	<input id="btnContinue" type="submit" value="Continuer" name="submit" class="btn btn-primary" style="width:100%; font-size:5em; margin-top:50px"/>
+</form>
+<script src="/socket.io/socket.io.js"></script>
+<script type="text/javascript">
+	$(document).ready( function() {
+		$('#btnload').on('change', function(event) {
+		});
+	});
+</script>
+<style type="text/css">
+	.btn-file {
+		position: relative;
+		overflow: hidden;
+	}
+	.btn-file input[type=file] {
+		position: absolute;
+		top: 0;
+		right: 0;
+		min-width: 100%;
+		min-height: 100%;
+		font-size: 100px;
+		text-align: right;
+		filter: alpha(opacity=0);
+		opacity: 0;
+		outline: none;
+		background: white;
+		cursor: inherit;
+		display: block;
+	}
+
+</style>

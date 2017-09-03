@@ -1,0 +1,318 @@
+<p id="sessionId" style="visibility:hidden">{{sessionId}}</p>
+<input id="guest" type="checkbox" name="guest"><br>
+<div class="jumbotron text-center">
+	<h1 id='myprice'>0.0</h1>
+</div>
+<div id='billContainer' style="width:100%"> 
+	{{#each items}}
+	<div id="{{this.id}}" class="line">
+		{{#unless this.topbottom}}
+		<div id="{{this.id}}_item" class="item-notselected item">
+			<span id="{{this.id}}_badge" class="badge badge-red {{this.id}}_badge">0</span> 
+			<img id="{{this.id}}_img" src="{{this.src}}" alt="Recognized price: {{this.price}}" />
+		</div>
+ 		{{/unless}}
+		{{#if this.topbottom}}
+		<div id="{{this.id}}" style="width:100%;">
+			<img src="{{this.src}}" style="width:100%;opacity: .3;"/>
+		</div>
+		{{/if}}
+	</div>
+	{{/each}}
+</div>
+<div id="totalChecked">
+	
+</div>
+<div id="summaryContainer" class="container" style="width:100%">
+	<ul id="total" class="list-group" style="font-size:4em">
+	</ul>
+	<br />
+	<ul id="summary" class="list-group" style="font-size:4em">
+	</ul>
+	<br />
+	<ul id="summaryGuest" class="list-group" style="font-size:4em">
+		<span>Guests:</span>
+	</ul>
+</div>
+
+<style>
+	.item-selected,.item-notselected  {
+		width:100%;
+		position:relative;
+	}
+
+	.item-selected img {
+		opacity: 1;
+		width:100%;
+	}
+
+	.item-notselected img {
+		opacity: .3;
+		width:100%;
+	}
+
+	.line {
+		display:flex;
+	}
+	#guest {
+		outline: none;
+		width: 100%;
+		height: 4em;
+		font-size: 5em;
+		line-height: 2;
+		display: block;
+		font-weight: bold;
+		border-radius: 3px;
+		border: 1px solid #B9B9B9;
+		-webkit-appearance: none;
+
+		background-image: -webkit-gradient( 
+			linear, left top, left bottom,
+			color-stop(0, #E8E8E8),
+			color-stop(1, #FDFDFD)
+			);
+		box-shadow: 0px 1px 2px #AFAFAF inset;
+		color: #7F7F7F;
+	}
+
+	#guest:checked {
+		background-image: -webkit-gradient( 
+			linear, left top, left bottom,
+			color-stop(0, #367EF8),
+			color-stop(1, #66A3F8)
+			);
+		box-shadow: 0px 1px 2px #1449A3 inset;
+		color: #fff;
+		text-shadow: 0px -1px 1px #000;
+		border: 1px solid #99B9E8;
+	}
+
+	#guest:before {
+		content: 'CLICK TO BE A GUEST';
+		margin-left:1em;
+		margin-top:1em;
+		float:left;
+	}
+
+	#guest:checked:before {
+		content: 'CLICK TO PAY';
+		margin-left:1em;
+		margin-top:1em;
+		float:left;
+	}
+
+	.badge {
+	    position: absolute;
+	    top:50%;
+	    right:0;
+	    padding: 3px 9px;
+	    border: 2px solid white;
+	    border-radius:100px;
+	    
+	    -webkit-background-clip: padding-box;
+	    font-size:27px;
+	    font-weight: bold;
+	    color: white;
+	    text-decoration: none;
+	    text-shadow: 0 -1px 0 rgba(0,0,0,.6);
+	    z-index: 100;
+	    -webkit-touch-callout: none;
+	    -webkit-user-select: none;
+	    -khtml-user-select: none;
+	    -moz-user-select: none;
+	    -ms-user-select: none;
+	    user-select: none;
+	}
+
+	.badge-green {
+		background: -webkit-linear-gradient(top, #8de88d 0%,#009600 100%);
+	}
+
+	.badge-red {
+		background: -webkit-linear-gradient(top, #FF6969 0%,#ff0000 100%);
+	}
+
+</style>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+	$(document).ready(function() {
+		var pseudo = prompt('Quel est votre pseudo ?');
+		if (!pseudo)
+			return;
+		pseudo = pseudo.trim();
+		$('#myprice').text(pseudo + ": 0.0 CHF");
+		var socket = io();
+		var sessionId = $('#sessionId').text();
+		socket.emit('newuser', {pseudo:pseudo, sessionId:sessionId});
+
+		socket.on('update', function(data) {
+			handleSessionUpdate(data['session']);
+			handleUsersStateUpdate(data['users']);		
+		});
+
+		socket.on('userDisconnected', function(data) {
+			handleDisconnection(data['user']);
+		});
+
+		var lastSessionUpdate;
+
+		function handleSessionUpdate(sessionState) {
+			lastSessionUpdate = sessionState;
+			sessionState.forEach(function(item) {
+				$('.' + item.id + '_badge').each(function() {
+					var badge = $(this);
+					badge.text(item.users.length);
+					if (item.users.length > 0) {
+						badge.addClass('badge-green');
+						badge.removeClass('badge-red');
+					}
+					else {
+						badge.addClass('badge-red');
+						badge.removeClass('badge-green');
+					}
+
+					if (item.users.indexOf(pseudo) > -1) {
+						setSelected(item.id);
+					}
+					else {
+						setNotSelected(item.id);
+					}
+				});
+			});
+
+		}
+
+		function handleUsersStateUpdate(usersState) {
+			$('#total').empty();
+			$('#myprice').text(pseudo + ": 0.0 CHF");
+			var paidPrice = usersState['paidPrice'];
+			if (paidPrice)
+				$('#total').append('<li class=\"list-group-item\"> Prix total: ' + paidPrice + ' CHF </li>');
+			var allusers = [];
+			for (var user in usersState) {
+				var userState = usersState[user];
+				if (userState == paidPrice)
+					continue;
+				var price = Math.round(userState.userprice*1000) / 1000;
+				if (userState.pseudo == pseudo) {
+					if (userState.guest) {
+						$('#myprice').text("0.0 CHF - You are the guest !");
+					}
+					else {
+						$('#myprice').text(pseudo +': ' + price + " CHF");
+					}
+				}
+				allusers.push(userState.pseudo);
+				if (userState.guest) {
+					if ($('#summaryGuest ' + pseudoCssSelector(userState.pseudo)).length > 0) {
+						$('#summaryGuest ' + pseudoCssSelector(userState.pseudo) + ' #details').text(userState.pseudo + ': ' + price + ' CHF');
+					}
+					else {
+						$('#summaryGuest').append('<li class=\"list-group-item\" id=\"'+userState.pseudo+'\"><span id=\"details\">' + userState.pseudo + ': ' + price + ' CHF </span></li>');
+					}
+					$('#summary '+ pseudoCssSelector(userState.pseudo)).remove();
+				}
+				else {
+					if ($('#summary ' + pseudoCssSelector(userState.pseudo)).length > 0) {
+						$('#summary ' + pseudoCssSelector(userState.pseudo) + ' #details').text(userState.pseudo + ': ' + price + ' CHF');
+					}
+					else {
+						$('#summary').append('<li class=\"list-group-item\" id=\"'+userState.pseudo+'\"><span id=\"details\">' + userState.pseudo + ': ' + price + ' CHF </span></li>');
+					}
+					$('#summaryGuest ' + pseudoCssSelector(userState.pseudo)).remove();
+				}
+				if ($(pseudoCssSelector(userState.pseudo)).find('.item').length > 0) {
+					closeUserSummaryDetails(userState.pseudo);
+					appendUserSummaryDetails(userState.pseudo);
+				}
+			}
+			$('#summaryContainer .list-group-item').each(function(potentialZero) {
+				if (allusers.indexOf($( this ).attr('id')) == -1) {
+					$( this ).remove();
+				}
+			});
+		}
+
+		function pseudoCssSelector(userpseudo) {
+			return 'li[id=\"'+userpseudo+'\"]';
+		}
+
+		function handleDisconnection(disconnectedPseudo) {
+			$('#summary ' + pseudoCssSelector(userState.pseudo)).remove();
+			$('#summaryGuest ' + pseudoCssSelector(userState.pseudo)).remove();
+		}
+
+		function setSelected(idx) {
+			$('#' + idx + '_item').removeClass('item-notselected');
+			$('#' + idx + '_item').addClass('item-selected');
+		}
+
+		function setNotSelected(idx) {
+			$('#' + idx + '_item').removeClass('item-selected');
+			$('#' + idx + '_item').addClass('item-notselected');
+		}
+
+		function appendUserSummaryDetails(userpseudo) {
+			var userSummary = $(pseudoCssSelector(userpseudo));
+			lastSessionUpdate.forEach(function(item) {
+				if (item.users.indexOf(userpseudo) > -1) {
+					var imgNode = $('#' + item.id + '_item');
+					if (imgNode) {
+						var clonedNode = imgNode.clone(true);
+						clonedNode.id = imgNode.id + '_' + userpseudo;
+						userSummary.append(clonedNode);
+					}
+				}
+			});
+		}
+
+		function closeUserSummaryDetails(userpseudo) {
+			var userSummary = $(pseudoCssSelector(userpseudo));
+			userSummary.find('.item').remove();
+		}
+
+		$('#summaryContainer').on('click', '.list-group-item', function() {
+			var userpseudo = $( this ).attr('id');
+			if ($(this).find('.item').length > 0) {
+				closeUserSummaryDetails(userpseudo);
+				return;
+			}
+			appendUserSummaryDetails(userpseudo);
+		});
+
+		$('#billContainer').on('click', '.item-notselected' , function() {
+			$( this ).removeClass('item-notselected');
+			$( this ).addClass('item-selected');
+			var itemId = $( this ).parent().attr('id');
+			socket.emit('toggle', {itemId:itemId, sessionId:sessionId});
+		});
+
+		$('#billContainer').on('click', '.item-selected' , function() {
+			$( this ).removeClass('item-selected');
+			$( this ).addClass('item-notselected');
+			var itemId = $( this ).parent().attr('id');
+			socket.emit('toggle', {itemId:itemId, sessionId:sessionId});
+		});
+
+		$('#billContainer').on('click', '.badge' , function(event) {
+			event.stopPropagation();
+			if (!lastSessionUpdate)
+				return;
+			var itemId = $( this ).parent().parent().attr('id');
+			var result;
+			lastSessionUpdate.forEach(function(item) {
+				if (item.id == itemId) {
+					result = item.price + "\n";
+					result += item.users.join();
+				}
+			});
+			alert(result);
+		});
+
+		$('#guest').on('change', function() {
+			var checked = $(this).is(':checked') 
+			socket.emit('guest', {guest:checked, sessionId:sessionId});
+		});
+
+	});
+</script>
